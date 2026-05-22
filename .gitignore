@@ -1,0 +1,4 @@
+.mygit/
+mygit
+*.o
+.DS_Store
