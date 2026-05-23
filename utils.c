@@ -41,38 +41,6 @@ void get_current_time(char *buffer, int buffer_size)
     buffer[strcspn(buffer, "\n")] = '\0';
 }
 
-int files_are_identical(char *path1, char *path2)
-{
-    FILE *f1 = fopen(path1, "r");
-    FILE *f2 = fopen(path2, "r");
-
-    if (!f1 || !f2)
-    {
-        if (f1)
-            fclose(f1);
-        if (f2)
-            fclose(f2);
-        return 0;
-    }
-
-    int ch1, ch2;
-    do
-    {
-        ch1 = fgetc(f1);
-        ch2 = fgetc(f2);
-        if (ch1 != ch2)
-        {
-            fclose(f1);
-            fclose(f2);
-            return 0;
-        }
-    } while (ch1 != EOF && ch2 != EOF);
-
-    fclose(f1);
-    fclose(f2);
-    return 1;
-}
-
 void calculate_commit_hash(char *parent, char *message, char *time_str, TrackedFile *files, int file_count, char *output_hash)
 {
     SHA_CTX ctx;
