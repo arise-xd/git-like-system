@@ -11,4 +11,6 @@ void calculate_commit_hash(char *parent, char *message, char *time_str, TrackedF
 
 int calculate_file_hash(char *filepath, char *output_hash);
 
+void get_name(const char *path, char *output);
+
 #endif

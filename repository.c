@@ -95,56 +95,88 @@ int init()
 
 int add(char *filename)
 {
-    FILE *test_file = fopen(filename, "r");
-    if (!test_file)
+    FILE *f = fopen(filename, "r");
+    if (!f)
     {
-        printf("\033[1;31mError:\033[0m File doesn't exist\n");
+        printf("\033[1;31mError:\033[0m Can't open file '%s'\n", filename);
         return 1;
     }
-    fclose(test_file);
 
-    FILE *index_check = fopen(".mygit/index", "r");
-    if (index_check)
+    char pure_filename[256];
+    get_name(filename, pure_filename);
+
+    char stage_path[512];
+    sprintf(stage_path, ".mygit/objects/temp_staged_ctx_%s", pure_filename);
+
+    FILE *stage = fopen(stage_path, "w");
+    if (!stage)
     {
-        char line[256];
-        while (fgets(line, sizeof(line), index_check))
+        printf("\033[1;31mError:\033[0m Can't create staged object\n");
+        fclose(f);
+        return 1;
+    }
+
+    int symbol;
+    while ((symbol = fgetc(f)) != EOF)
+    {
+        fputc(symbol, stage);
+    }
+
+    fclose(f);
+    fclose(stage);
+
+    char index_path[] = ".mygit/index";
+    TrackedFile current_files[100];
+    int file_count = 0;
+
+    FILE *index_read = fopen(index_path, "r");
+    if (index_read)
+    {
+        char line[512];
+        while (fgets(line, sizeof(line), index_read))
         {
             line[strcspn(line, "\n")] = '\0';
-            if (strcmp(line, filename) == 0)
+            if (strlen(line) > 0)
             {
-                fclose(index_check);
-                printf("\033[1;33mFile '%s' is already staged\033[0m\n", filename);
-                return 0;
+                strcpy(current_files[file_count].local_path, line);
+                file_count++;
             }
         }
-        fclose(index_check);
+        fclose(index_read);
     }
 
-    FILE *index = fopen(".mygit/index", "a");
-    if (!index)
+    int already_staged = 0;
+    for (int i = 0; i < file_count; i++)
     {
-        printf("\033[1;31mError:\033[0m Cannot open index file\n");
-        return 1;
+        if (strcmp(current_files[i].local_path, filename) == 0)
+        {
+            already_staged = 1;
+            break;
+        }
     }
 
-    fprintf(index, "%s\n", filename);
-    fclose(index);
+    if (!already_staged)
+    {
+        FILE *index_write = fopen(index_path, "a");
+        if (index_write)
+        {
+            fprintf(index_write, "%s\n", filename);
+            fclose(index_write);
+        }
+    }
 
-    printf("\033[1;32mFile successfully added\033[0m\n");
+    printf("\033[1;32mFile '%s' staged successfully.\033[0m\n", filename);
     return 0;
 }
 
 int my_remove(char *filename)
 {
-    FILE *test_file = fopen(filename, "r");
-    if (!test_file)
-    {
-        printf("\033[1;31mError:\033[0m File doesn't exist\n");
-        return 1;
-    }
-    fclose(test_file);
+    char pure_filename[256];
+    get_name(filename, pure_filename);
 
-    FILE *index = fopen(".mygit/index", "r");
+    char index_path[] = ".mygit/index";
+
+    FILE *index = fopen(index_path, "r");
     if (!index)
     {
         printf("\033[1;31mError:\033[0m Can't open index file\n");
@@ -163,13 +195,13 @@ int my_remove(char *filename)
     int found_in_index = 0;
     int already_marked_removed = 0;
     char removed_marker[300];
-    sprintf(removed_marker, "removed: %s", filename);
+    sprintf(removed_marker, "removed: %s", pure_filename);
 
     while (fgets(line, sizeof(line), index))
     {
         line[strcspn(line, "\n")] = '\0';
 
-        if (strcmp(line, filename) == 0)
+        if (strcmp(line, pure_filename) == 0)
         {
             found_in_index = 1;
         }
@@ -187,17 +219,17 @@ int my_remove(char *filename)
 
     if (!found_in_index && !already_marked_removed)
     {
-        fprintf(temp, "removed: %s\n", filename);
+        fprintf(temp, "removed: %s\n", pure_filename);
     }
 
     fclose(temp);
 
-    remove(".mygit/index");
-    rename(".mygit/index.tmp", ".mygit/index");
+    remove(index_path);
+    rename(".mygit/index.tmp", index_path);
 
     if (already_marked_removed)
     {
-        printf("\033[1;32mRemoval mark canceled for '%s'\033[0m\n", filename);
+        printf("\033[1;32mRemoval mark canceled for '%s'\033[0m\n", pure_filename);
     }
     else if (found_in_index)
     {
@@ -264,6 +296,7 @@ int status()
         while (fgets(line, sizeof(line), index_read))
         {
             line[strcspn(line, "\n")] = '\0';
+            if (strlen(line) == 0) continue;
 
             if (strncmp(line, "removed: ", 9) == 0)
             {
@@ -293,8 +326,11 @@ int status()
                 }
                 else
                 {
+                    char stage_path[512];
+                    sprintf(stage_path, ".mygit/objects/temp_staged_ctx_%s", line);
+
                     char current_disk_hash[41] = {0};
-                    calculate_file_hash(line, current_disk_hash);
+                    calculate_file_hash(stage_path, current_disk_hash);
 
                     if (strcmp(current_disk_hash, current_files[exact_match_index].file_hash) == 0)
                     {

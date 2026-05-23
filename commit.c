@@ -88,6 +88,7 @@ int do_commit(char *message)
         while (fgets(line, sizeof(line), index_read))
         {
             line[strcspn(line, "\n")] = '\0';
+            if (strlen(line) == 0) continue;
 
             if (strncmp(line, "removed: ", 9) == 0)
             {
@@ -120,34 +121,30 @@ int do_commit(char *message)
                     }
                 }
 
-                char current_disk_hash[41] = {0};
-                calculate_file_hash(line, current_disk_hash);
+                char pure_line_name[256];
+                get_name(line, pure_line_name);
 
-                if (found && strcmp(current_disk_hash, current_files[existing_index].file_hash) == 0)
+                char new_file_path[512];
+                sprintf(new_file_path, ".mygit/objects/temp_staged_ctx_%s", pure_line_name);
+
+                char current_disk_hash[41] = {0};
+                calculate_file_hash(new_file_path, current_disk_hash);
+
+                if (found)
                 {
-                    // Nothing to do(file doesn't change)
+                    strcpy(current_files[existing_index].object_path, new_file_path);
+                    strcpy(current_files[existing_index].file_hash, current_disk_hash);
                 }
                 else
                 {
-                    char new_file_path[512];
-                    sprintf(new_file_path, ".mygit/objects/temp_staged_ctx_%s", line);
-                    copy_file(line, new_file_path);
-
-                    if (found)
-                    {
-                        strcpy(current_files[existing_index].object_path, new_file_path);
-                        strcpy(current_files[existing_index].file_hash, current_disk_hash);
-                    }
-                    else
-                    {
-                        strcpy(current_files[file_count].local_path, line);
-                        strcpy(current_files[file_count].object_path, new_file_path);
-                        strcpy(current_files[file_count].file_hash, current_disk_hash);
-                        file_count++;
-                    }
+                    strcpy(current_files[file_count].local_path, line);
+                    strcpy(current_files[file_count].object_path, new_file_path);
+                    strcpy(current_files[file_count].file_hash, current_disk_hash);
+                    file_count++;
                 }
             }
         }
+        fclose(index_read);
     }
 
     char time_string[64];
@@ -160,8 +157,11 @@ int do_commit(char *message)
     {
         if (strstr(current_files[i].object_path, "temp_staged_ctx") != NULL)
         {
+            char pure_local_name[256];
+            get_name(current_files[i].local_path, pure_local_name);
+
             char final_file_path[512];
-            sprintf(final_file_path, ".mygit/objects/%s_%s", new_commit_name, current_files[i].local_path);
+            sprintf(final_file_path, ".mygit/objects/%s_%s", new_commit_name, pure_local_name);
             rename(current_files[i].object_path, final_file_path);
             strcpy(current_files[i].object_path, final_file_path);
         }
@@ -174,8 +174,6 @@ int do_commit(char *message)
     if (!new_commit)
     {
         printf("\033[1;31mError:\033[0m Can't open new commit file\n");
-        if (index_read)
-            fclose(index_read);
         return 1;
     }
     else
@@ -189,10 +187,7 @@ int do_commit(char *message)
             fprintf(new_commit, "%s -> %s [%s]\n", current_files[i].local_path, current_files[i].object_path, current_files[i].file_hash);
         }
     }
-
     fclose(new_commit);
-    if (index_read)
-        fclose(index_read);
 
     FILE *head = fopen(".mygit/head", "w");
     if (!head)

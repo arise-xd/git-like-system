@@ -93,3 +93,16 @@ int calculate_file_hash(char *filepath, char *output_hash)
     output_hash[40] = '\0';
     return 1;
 }
+
+void get_name(const char *path, char *output)
+{
+    const char *last_slash = strrchr(path, '/');
+    if (last_slash)
+    {
+        strcpy(output, last_slash + 1);
+    }
+    else
+    {
+        strcpy(output, path);
+    }
+}
