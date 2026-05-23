@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include "repository.h"
 #include "commit.h"
 #include "log.h"
@@ -57,6 +58,14 @@ int main(int argc, char *argv[])
             printf("See './mygit --help' for usage instructions.\n");
             return 1;
         }
+
+        struct stat path_stat;
+        if (stat(argv[2], &path_stat) == 0 && S_ISDIR(path_stat.st_mode))
+        {
+            printf("\033[1;31mError:\033[0m '%s' is a directory. Please choose a file inside it.\n", argv[2]);
+            return 1;
+        }
+
         return add(argv[2]);
     }
 
@@ -68,6 +77,14 @@ int main(int argc, char *argv[])
             printf("See './mygit --help' for usage instructions.\n");
             return 1;
         }
+
+        struct stat path_stat;
+        if (stat(argv[2], &path_stat) == 0 && S_ISDIR(path_stat.st_mode))
+        {
+            printf("\033[1;31mError:\033[0m '%s' is a directory. Please specify a file inside it.\n", argv[2]);
+            return 1;
+        }
+
         return my_remove(argv[2]);
     }
 
