@@ -23,4 +23,6 @@ int calculate_file_hash(char *filepath, char *output_hash);
 
 void get_name(const char *path, char *output);
 
+int is_safe_path(const char *path);
+
 #endif

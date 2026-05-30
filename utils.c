@@ -106,3 +106,38 @@ void get_name(const char *path, char *output)
         strcpy(output, path);
     }
 }
+
+int is_safe_path(const char *path)
+{
+    if (!path || strlen(path) == 0)
+    {
+        return 0;
+    }
+
+    if (path[0] == '/')
+    {
+        return 0;
+    }
+
+    if (strlen(path) >= 2 && path[1] == ':')
+    {
+        return 0;
+    }
+
+    if (strcmp(path, "..") == 0)
+    {
+        return 0;
+    }
+
+    if (strstr(path, "../") != NULL || strstr(path, "..\\") != NULL)
+    {
+        return 0;
+    }
+
+    if (strncmp(path, ".mygit", 6) == 0)
+    {
+        return 0;
+    }
+    
+    return 1;
+}

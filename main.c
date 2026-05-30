@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include "repository.h"
 #include "commit.h"
+#include "utils.h"
 #include "log.h"
 
 void print_help()
@@ -54,15 +55,14 @@ int main(int argc, char *argv[])
     {
         if (argc < 3)
         {
-            printf("\033[1;31mError:\033[0m Missing file argument for 'add'.\n");
+            printf("\033[1;31mError:\033[0m Missing filename for 'add'.\n");
             printf("See './mygit --help' for usage instructions.\n");
             return 1;
         }
 
-        struct stat path_stat;
-        if (stat(argv[2], &path_stat) == 0 && S_ISDIR(path_stat.st_mode))
+        if (!is_safe_path(argv[2]))
         {
-            printf("\033[1;31mError:\033[0m '%s' is a directory. Please choose a file inside it.\n", argv[2]);
+            printf("\033[1;31mError:\033[0m Path '%s' is outside the repository or restricted.\n", argv[2]);
             return 1;
         }
 
@@ -73,15 +73,14 @@ int main(int argc, char *argv[])
     {
         if (argc < 3)
         {
-            printf("\033[1;31mError:\033[0m Missing file argument for 'remove'.\n");
+            printf("\033[1;31mError:\033[0m Missing filename for 'remove'.\n");
             printf("See './mygit --help' for usage instructions.\n");
             return 1;
         }
 
-        struct stat path_stat;
-        if (stat(argv[2], &path_stat) == 0 && S_ISDIR(path_stat.st_mode))
+        if (!is_safe_path(argv[2]))
         {
-            printf("\033[1;31mError:\033[0m '%s' is a directory. Please specify a file inside it.\n", argv[2]);
+            printf("\033[1;31mError:\033[0m Path '%s' is outside the repository or restricted.\n", argv[2]);
             return 1;
         }
 
