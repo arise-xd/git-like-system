@@ -56,7 +56,7 @@ int init()
             fclose(index);
         }
 
-        char initial_hash[64];
+        char initial_hash[MAX_HASH_LEN];
         char *init_msg = "Initial commit";
         time_t raw_time = time(NULL);
         char *time_string = ctime(&raw_time);
@@ -72,7 +72,7 @@ int init()
             fclose(head);
         }
 
-        char first_commit_path[512];
+        char first_commit_path[MAX_PATH_LEN];
         sprintf(first_commit_path, ".mygit/commits/%s", initial_hash);
         FILE *first_commit = fopen(first_commit_path, "w");
         if (first_commit)
@@ -102,10 +102,10 @@ int add(char *filename)
         return 1;
     }
 
-    char pure_filename[256];
+    char pure_filename[MAX_NAME_LEN];
     get_name(filename, pure_filename);
 
-    char stage_path[512];
+    char stage_path[MAX_PATH_LEN];
     sprintf(stage_path, ".mygit/objects/temp_staged_ctx_%s", pure_filename);
 
     FILE *stage = fopen(stage_path, "w");
@@ -126,17 +126,17 @@ int add(char *filename)
     fclose(stage);
 
     char index_path[] = ".mygit/index";
-    TrackedFile current_files[100];
+    TrackedFile current_files[MAX_FILES_COUNT];
     int file_count = 0;
 
     FILE *index_read = fopen(index_path, "r");
     if (index_read)
     {
-        char line[512];
+        char line[MAX_LINE_LEN];
         while (fgets(line, sizeof(line), index_read))
         {
             line[strcspn(line, "\n")] = '\0';
-            if (strlen(line) > 0)
+            if (strlen(line) > 0 && file_count < MAX_FILES_COUNT)
             {
                 strcpy(current_files[file_count].local_path, line);
                 file_count++;
@@ -171,7 +171,7 @@ int add(char *filename)
 
 int my_remove(char *filename)
 {
-    char pure_filename[256];
+    char pure_filename[MAX_NAME_LEN];
     get_name(filename, pure_filename);
 
     char index_path[] = ".mygit/index";
@@ -191,10 +191,10 @@ int my_remove(char *filename)
         return 1;
     }
 
-    char line[256];
+    char line[MAX_LINE_LEN];
     int found_in_index = 0;
     int already_marked_removed = 0;
-    char removed_marker[300];
+    char removed_marker[MAX_PATH_LEN];
     sprintf(removed_marker, "removed: %s", pure_filename);
 
     while (fgets(line, sizeof(line), index))
@@ -251,7 +251,7 @@ int status()
         printf("\033[1;31mError:\033[0m Can't open head file\n");
         return 1;
     }
-    char parent[64];
+    char parent[MAX_HASH_LEN];
     if (fscanf(head_read, "%s", parent) != 1)
     {
         printf("\033[1;31mError:\033[0m HEAD is empty\n");
@@ -260,15 +260,15 @@ int status()
     }
     fclose(head_read);
 
-    TrackedFile current_files[100];
+    TrackedFile current_files[MAX_FILES_COUNT];
     int file_count = 0;
-    char parent_path[128];
+    char parent_path[MAX_PATH_LEN];
     sprintf(parent_path, ".mygit/commits/%s", parent);
 
     FILE *parent_file = fopen(parent_path, "r");
     if (parent_file)
     {
-        char line[512];
+        char line[MAX_LINE_LEN];
         int inside_files_section = 0;
         while (fgets(line, sizeof(line), parent_file))
         {
@@ -279,7 +279,7 @@ int status()
                 inside_files_section = 1;
                 continue;
             }
-            if (inside_files_section)
+            if (inside_files_section && file_count < MAX_FILES_COUNT)
             {
                 parse_status_line(line, &current_files[file_count]);
                 file_count++;
@@ -292,7 +292,7 @@ int status()
     int has_changes = 0;
     if (index_read)
     {
-        char line[512];
+        char line[MAX_LINE_LEN];
         while (fgets(line, sizeof(line), index_read))
         {
             line[strcspn(line, "\n")] = '\0';
@@ -326,10 +326,10 @@ int status()
                 }
                 else
                 {
-                    char stage_path[512];
+                    char stage_path[MAX_PATH_LEN];
                     sprintf(stage_path, ".mygit/objects/temp_staged_ctx_%s", line);
 
-                    char current_disk_hash[41] = {0};
+                    char current_disk_hash[MAX_HASH_LEN] = {0};
                     calculate_file_hash(stage_path, current_disk_hash);
 
                     if (strcmp(current_disk_hash, current_files[exact_match_index].file_hash) == 0)

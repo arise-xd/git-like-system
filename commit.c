@@ -45,7 +45,7 @@ int do_commit(char *message)
         return 1;
     }
 
-    char parent[64];
+    char parent[MAX_HASH_LEN];
     if (fscanf(head_read, "%s", parent) != 1)
     {
         printf("\033[1;31mError:\033[0m HEAD is empty\n");
@@ -54,15 +54,15 @@ int do_commit(char *message)
     }
     fclose(head_read);
 
-    TrackedFile current_files[100];
+    TrackedFile current_files[MAX_FILES_COUNT];
     int file_count = 0;
-    char parent_path[128];
+    char parent_path[MAX_PATH_LEN];
     sprintf(parent_path, ".mygit/commits/%s", parent);
 
     FILE *parent_file = fopen(parent_path, "r");
     if (parent_file)
     {
-        char line[512];
+        char line[MAX_LINE_LEN];
         int inside_files_section = 0;
         while (fgets(line, sizeof(line), parent_file))
         {
@@ -73,7 +73,7 @@ int do_commit(char *message)
                 inside_files_section = 1;
                 continue;
             }
-            if (inside_files_section)
+            if (inside_files_section && file_count < MAX_FILES_COUNT)
             {
                 parse_files_line(line, &current_files[file_count]);
                 file_count++;
@@ -85,7 +85,7 @@ int do_commit(char *message)
     FILE *index_read = fopen(".mygit/index", "r");
     if (index_read)
     {
-        char line[512];
+        char line[MAX_LINE_LEN];
         while (fgets(line, sizeof(line), index_read))
         {
             line[strcspn(line, "\n")] = '\0';
@@ -122,13 +122,13 @@ int do_commit(char *message)
                     }
                 }
 
-                char pure_line_name[256];
+                char pure_line_name[MAX_NAME_LEN];
                 get_name(line, pure_line_name);
 
-                char new_file_path[512];
+                char new_file_path[MAX_PATH_LEN];
                 sprintf(new_file_path, ".mygit/objects/temp_staged_ctx_%s", pure_line_name);
 
-                char current_disk_hash[41] = {0};
+                char current_disk_hash[MAX_HASH_LEN] = {0};
                 calculate_file_hash(new_file_path, current_disk_hash);
 
                 if (found)
@@ -136,7 +136,7 @@ int do_commit(char *message)
                     strcpy(current_files[existing_index].object_path, new_file_path);
                     strcpy(current_files[existing_index].file_hash, current_disk_hash);
                 }
-                else
+                else if (file_count < MAX_FILES_COUNT)
                 {
                     strcpy(current_files[file_count].local_path, line);
                     strcpy(current_files[file_count].object_path, new_file_path);
@@ -148,27 +148,27 @@ int do_commit(char *message)
         fclose(index_read);
     }
 
-    char time_string[64];
+    char time_string[MAX_LINE_LEN];
     get_current_time(time_string, sizeof(time_string));
 
-    char new_commit_name[64];
+    char new_commit_name[MAX_HASH_LEN];
     calculate_commit_hash(parent, message, time_string, current_files, file_count, new_commit_name);
 
     for (int i = 0; i < file_count; i++)
     {
         if (strstr(current_files[i].object_path, "temp_staged_ctx") != NULL)
         {
-            char pure_local_name[256];
+            char pure_local_name[MAX_NAME_LEN];
             get_name(current_files[i].local_path, pure_local_name);
 
-            char final_file_path[512];
+            char final_file_path[MAX_PATH_LEN];
             sprintf(final_file_path, ".mygit/objects/%s_%s", new_commit_name, pure_local_name);
             rename(current_files[i].object_path, final_file_path);
             strcpy(current_files[i].object_path, final_file_path);
         }
     }
 
-    char new_commit_path[512];
+    char new_commit_path[MAX_PATH_LEN];
     sprintf(new_commit_path, ".mygit/commits/%s", new_commit_name);
 
     FILE *new_commit = fopen(new_commit_path, "w");
@@ -208,7 +208,7 @@ int do_commit(char *message)
 
 int do_checkout(char *commit_name, char *filename)
 {
-    char commit_path[128];
+    char commit_path[MAX_PATH_LEN];
     sprintf(commit_path, ".mygit/commits/%s", commit_name);
     FILE *commit = fopen(commit_path, "r");
     if (!commit)
@@ -217,10 +217,10 @@ int do_checkout(char *commit_name, char *filename)
         return 1;
     }
 
-    char line[512];
+    char line[MAX_LINE_LEN];
     int inside_files_section = 0;
     int find_file = 0;
-    char file_object_path[128];
+    char file_object_path[MAX_PATH_LEN];
     while (fgets(line, sizeof(line), commit))
     {
         line[strcspn(line, "\n")] = '\0';
@@ -250,13 +250,13 @@ int do_checkout(char *commit_name, char *filename)
         return 1;
     }
 
-    char target_path[512];
+    char target_path[MAX_PATH_LEN];
     strcpy(target_path, filename);
 
     char *last_slash = strrchr(filename, '/');
     if (last_slash)
     {
-        char dir_path[512];
+        char dir_path[MAX_PATH_LEN];
         size_t dir_len = last_slash - filename;
         strncpy(dir_path, filename, dir_len);
         dir_path[dir_len] = '\0';
@@ -264,7 +264,7 @@ int do_checkout(char *commit_name, char *filename)
         struct stat st;
         if (stat(dir_path, &st) != 0 || !S_ISDIR(st.st_mode))
         {
-            char pure_name[256];
+            char pure_name[MAX_NAME_LEN];
             get_name(filename, pure_name);
             strcpy(target_path, pure_name);
             printf("\033[1;33mWarning:\033[0m Directory '%s' does not exist. Restoring file as '%s' in the root directory.\n", dir_path, target_path);
@@ -278,7 +278,7 @@ int do_checkout(char *commit_name, char *filename)
 
 int read_files(char *commit, TrackedFile *files, int *file_count)
 {
-    char commit_path[128];
+    char commit_path[MAX_PATH_LEN];
     sprintf(commit_path, ".mygit/commits/%s", commit);
     FILE *commit_file = fopen(commit_path, "r");
     if (!commit_file)
@@ -287,7 +287,7 @@ int read_files(char *commit, TrackedFile *files, int *file_count)
         return 1;
     }
 
-    char line[512];
+    char line[MAX_LINE_LEN];
     int inside_files_section = 0;
     while (fgets(line, sizeof(line), commit_file))
     {
@@ -298,7 +298,7 @@ int read_files(char *commit, TrackedFile *files, int *file_count)
             inside_files_section = 1;
             continue;
         }
-        if (inside_files_section)
+        if (inside_files_section && *file_count < MAX_FILES_COUNT)
         {
             parse_files_line(line, &files[*file_count]);
             (*file_count)++;
@@ -310,9 +310,9 @@ int read_files(char *commit, TrackedFile *files, int *file_count)
 
 int do_diff(char *target_commit)
 {
-    TrackedFile current_files[100];
-    TrackedFile target_files[100];
-    char current_commit[64];
+    TrackedFile current_files[MAX_FILES_COUNT];
+    TrackedFile target_files[MAX_FILES_COUNT];
+    char current_commit[MAX_HASH_LEN];
     FILE *head_read = fopen(".mygit/head", "r");
     if (!head_read)
     {

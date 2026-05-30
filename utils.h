@@ -3,6 +3,12 @@
 
 #include "commit.h"
 
+#define MAX_PATH_LEN 512
+#define MAX_HASH_LEN 64 
+#define MAX_LINE_LEN 512
+#define MAX_NAME_LEN 256  
+#define MAX_FILES_COUNT 100
+
 int copy_file(char *source, char *destination);
 
 void get_current_time(char *buffer, int buffer_size);
