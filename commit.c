@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
 #include "commit.h"
 #include "utils.h"
 
@@ -249,8 +250,29 @@ int do_checkout(char *commit_name, char *filename)
         return 1;
     }
 
-    copy_file(file_object_path, filename);
-    printf("\033[1;32mrestored: %s\033[0m (from commit %s)\n", filename, commit_name);
+    char target_path[512];
+    strcpy(target_path, filename);
+
+    char *last_slash = strrchr(filename, '/');
+    if (last_slash)
+    {
+        char dir_path[512];
+        size_t dir_len = last_slash - filename;
+        strncpy(dir_path, filename, dir_len);
+        dir_path[dir_len] = '\0';
+
+        struct stat st;
+        if (stat(dir_path, &st) != 0 || !S_ISDIR(st.st_mode))
+        {
+            char pure_name[256];
+            get_name(filename, pure_name);
+            strcpy(target_path, pure_name);
+            printf("\033[1;33mWarning:\033[0m Directory '%s' does not exist. Restoring file as '%s' in the root directory.\n", dir_path, target_path);
+        }
+    }
+
+    copy_file(file_object_path, target_path);
+    printf("\033[1;32mrestored: %s\033[0m (from commit %s)\n", target_path, commit_name);
     return 0;
 }
 
