@@ -16,17 +16,17 @@
 
 static void parse_status_line(char *line, TrackedFile *file)
 {
-    char *arrow = strstr(line, " -> ");
+    char *arrow = strstr(line, ARROW_SEP);
     if (arrow)
     {
         *arrow = '\0';
-        char *paths_and_hash = arrow + 4;
+        char *paths_and_hash = arrow + (sizeof(ARROW_SEP) - 1);
         char *bracket = strchr(paths_and_hash, ' ');
 
         if (bracket && *(bracket + 1) == '[')
         {
             *bracket = '\0';
-            char *hash_start = bracket + 2;
+            char *hash_start = bracket + (sizeof(HASH_PREFIX) - 1);
             char *hash_end = strchr(hash_start, ']');
             if (hash_end)
                 *hash_end = '\0';
@@ -195,7 +195,7 @@ int my_remove(char *filename)
     int found_in_index = 0;
     int already_marked_removed = 0;
     char removed_marker[MAX_PATH_LEN];
-    sprintf(removed_marker, "removed: %s", pure_filename);
+    sprintf(removed_marker, "%s%s", REMOVED_PREFIX, pure_filename);
 
     while (fgets(line, sizeof(line), index))
     {
@@ -219,7 +219,7 @@ int my_remove(char *filename)
 
     if (!found_in_index && !already_marked_removed)
     {
-        fprintf(temp, "removed: %s\n", pure_filename);
+        fprintf(temp, "%s%s\n", REMOVED_PREFIX, pure_filename);
     }
 
     fclose(temp);
@@ -298,9 +298,9 @@ int status()
             line[strcspn(line, "\n")] = '\0';
             if (strlen(line) == 0) continue;
 
-            if (strncmp(line, "removed: ", 9) == 0)
+            if (strncmp(line, REMOVED_PREFIX, sizeof(REMOVED_PREFIX) - 1) == 0)
             {
-                char *filename_to_remove = line + 9;
+                char *filename_to_remove = line + (sizeof(REMOVED_PREFIX) - 1);
                 printf("\033[0;31mDeleted: %s\033[0m\n", filename_to_remove);
                 has_changes = 1;
             }

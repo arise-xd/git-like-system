@@ -9,6 +9,10 @@
 #define MAX_NAME_LEN 256  
 #define MAX_FILES_COUNT 100
 
+#define ARROW_SEP " -> "
+#define HASH_PREFIX " ["
+#define REMOVED_PREFIX "removed: "
+
 int copy_file(char *source, char *destination);
 
 void get_current_time(char *buffer, int buffer_size);

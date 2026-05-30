@@ -8,17 +8,17 @@
 
 static void parse_files_line(char *line, TrackedFile *file)
 {
-    char *arrow = strstr(line, " -> ");
+    char *arrow = strstr(line, ARROW_SEP);
     if (arrow)
     {
         *arrow = '\0';
-        char *paths_and_hash = arrow + 4;
+        char *paths_and_hash = arrow + (sizeof(ARROW_SEP) - 1);
         char *bracket = strchr(paths_and_hash, ' ');
 
         if (bracket && *(bracket + 1) == '[')
         {
             *bracket = '\0';
-            char *hash_start = bracket + 2;
+            char *hash_start = bracket + (sizeof(HASH_PREFIX) - 1);
             char *hash_end = strchr(hash_start, ']');
             if (hash_end)
                 *hash_end = '\0';
@@ -91,9 +91,9 @@ int do_commit(char *message)
             line[strcspn(line, "\n")] = '\0';
             if (strlen(line) == 0) continue;
 
-            if (strncmp(line, "removed: ", 9) == 0)
+            if (strncmp(line, REMOVED_PREFIX, sizeof(REMOVED_PREFIX) - 1) == 0)
             {
-                char *filename_to_remove = line + 9;
+                char *filename_to_remove = line + (sizeof(REMOVED_PREFIX) - 1);
                 for (int i = 0; i < file_count; i++)
                 {
                     if (strcmp(current_files[i].local_path, filename_to_remove) == 0)
